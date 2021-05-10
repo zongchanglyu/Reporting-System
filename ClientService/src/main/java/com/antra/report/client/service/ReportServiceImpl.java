@@ -29,6 +29,10 @@ import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 @Service
@@ -72,32 +76,70 @@ public class ReportServiceImpl implements ReportService {
     @Override
     public ReportVO generateReportsSync(ReportRequest request) {
         persistToLocal(request);
-        sendDirectRequests(request);
+        try {
+            sendDirectRequests(request);
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         return new ReportVO(reportRequestRepo.findById(request.getReqId()).orElseThrow());
     }
+
     //TODO:Change to parallel process using Threadpool? CompletableFuture?
-    private void sendDirectRequests(ReportRequest request) {
+    private void sendDirectRequests(ReportRequest request) throws ExecutionException, InterruptedException {
         RestTemplate rs = new RestTemplate();
-        ExcelResponse excelResponse = new ExcelResponse();
-        PDFResponse pdfResponse = new PDFResponse();
-        try {
-            excelResponse = rs.postForEntity("http://localhost:8888/excel", request, ExcelResponse.class).getBody();
-        } catch(Exception e){
-            log.error("Excel Generation Error (Sync) : e", e);
-            excelResponse.setReqId(request.getReqId());
-            excelResponse.setFailed(true);
-        } finally {
-            updateLocal(excelResponse);
-        }
-        try {
-            pdfResponse = rs.postForEntity("http://localhost:9999/pdf", request, PDFResponse.class).getBody();
-        } catch(Exception e){
-            log.error("PDF Generation Error (Sync) : e", e);
-            pdfResponse.setReqId(request.getReqId());
-            pdfResponse.setFailed(true);
-        } finally {
-            updateLocal(pdfResponse);
-        }
+//        ExcelResponse excelResponse = new ExcelResponse();
+//        PDFResponse pdfResponse = new PDFResponse();
+        ExecutorService executor = Executors.newCachedThreadPool();
+
+        CompletableFuture<ExcelResponse> cf1 = CompletableFuture.supplyAsync(()->{
+            ExcelResponse excelResponse = new ExcelResponse();
+            try {
+                excelResponse = rs.postForEntity("http://localhost:8888/excel", request, ExcelResponse.class).getBody();
+            } catch(Exception e){
+                log.error("Excel Generation Error (Sync) : e", e);
+                excelResponse.setReqId(request.getReqId());
+                excelResponse.setFailed(true);
+            } finally {
+                return excelResponse;
+            }
+        },executor);
+
+        CompletableFuture<PDFResponse> cf2 = CompletableFuture.supplyAsync(()->{
+            PDFResponse pdfResponse = new PDFResponse();
+            try {
+                pdfResponse = rs.postForEntity("http://localhost:9999/pdf", request, PDFResponse.class).getBody();
+            } catch(Exception e){
+                log.error("PDF Generation Error (Sync) : e", e);
+                pdfResponse.setReqId(request.getReqId());
+                pdfResponse.setFailed(true);
+            } finally {
+                return pdfResponse;
+            }
+        },executor);
+
+        updateLocal(cf1.get());
+        updateLocal(cf2.get());
+
+//        try {
+//            excelResponse = rs.postForEntity("http://localhost:8888/excel", request, ExcelResponse.class).getBody();
+//        } catch(Exception e){
+//            log.error("Excel Generation Error (Sync) : e", e);
+//            excelResponse.setReqId(request.getReqId());
+//            excelResponse.setFailed(true);
+//        } finally {
+//            updateLocal(excelResponse);
+//        }
+//        try {
+//            pdfResponse = rs.postForEntity("http://localhost:9999/pdf", request, PDFResponse.class).getBody();
+//        } catch(Exception e){
+//            log.error("PDF Generation Error (Sync) : e", e);
+//            pdfResponse.setReqId(request.getReqId());
+//            pdfResponse.setFailed(true);
+//        } finally {
+//            updateLocal(pdfResponse);
+//        }
     }
 
     private void updateLocal(ExcelResponse excelResponse) {
