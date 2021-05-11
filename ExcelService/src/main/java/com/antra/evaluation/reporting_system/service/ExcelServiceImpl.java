@@ -1,5 +1,6 @@
 package com.antra.evaluation.reporting_system.service;
 
+import com.amazonaws.services.s3.AmazonS3;
 import com.antra.evaluation.reporting_system.exception.FileGenerationException;
 import com.antra.evaluation.reporting_system.pojo.api.ExcelRequest;
 import com.antra.evaluation.reporting_system.pojo.api.MultiSheetExcelRequest;
@@ -11,6 +12,7 @@ import com.antra.evaluation.reporting_system.repo.ExcelRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
@@ -27,10 +29,16 @@ public class ExcelServiceImpl implements ExcelService {
 
     private ExcelGenerationService excelGenerationService;
 
+    private AmazonS3 s3Client;
+
+    @Value("${s3.bucket}")
+    private String s3Bucket;
+
     @Autowired
-    public ExcelServiceImpl(ExcelRepository excelRepository, ExcelGenerationService excelGenerationService) {
+    public ExcelServiceImpl(ExcelRepository excelRepository, ExcelGenerationService excelGenerationService, AmazonS3 s3Client) {
         this.excelRepository = excelRepository;
         this.excelGenerationService = excelGenerationService;
+        this.s3Client = s3Client;
     }
 
     @Override
@@ -60,10 +68,18 @@ public class ExcelServiceImpl implements ExcelService {
             fileInfo.setSubmitter(request.getSubmitter());
             fileInfo.setFileSize(generatedFile.length());
             fileInfo.setDescription(request.getDescription());
+
+            //Upload excel files to S3 Cloud
+            File temp = new File(generatedFile.getAbsolutePath());
+            log.debug("Upload excel file to s3 {}", generatedFile.getAbsolutePath());
+            s3Client.putObject(s3Bucket,fileInfo.getFileId(),temp);
+            log.debug("Uploaded excel file to s3");
+
         } catch (IOException e) {
 //            log.error("Error in generateFile()", e);
             throw new FileGenerationException(e);
         }
+
         excelRepository.saveFile(fileInfo);
         log.debug("Excel File Generated : {}", fileInfo);
         return fileInfo;

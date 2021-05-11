@@ -243,8 +243,46 @@ public class ReportServiceImpl implements ReportService {
         return entity;
     }
 
+    @Transactional
     @Override
     public void delteFileById(String reqId) {
+        sendDeleteRequest(reqId);
         reportRequestRepo.deleteById(reqId);
     }
+
+    public void sendDeleteRequest(String id) {
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        RestTemplate rs = new RestTemplate();
+
+        CompletableFuture<ExcelResponse> cf1 = CompletableFuture.supplyAsync(()->{
+            ExcelResponse excelResponse = new ExcelResponse();
+            ReportRequestEntity entity = reportRequestRepo.findById(id).orElseThrow();
+            try {
+                rs.delete("http://localhost:8888/excel/{id}",entity.getExcelReport().getFileId());
+                excelResponse.setReqId(id);
+            } catch(Exception e){
+                log.error("Excel Deletion Error (Sync) : e", e);
+                excelResponse.setReqId(id);
+                excelResponse.setFailed(true);
+            } finally {
+                return excelResponse;
+            }
+        },executor);
+
+        CompletableFuture<PDFResponse> cf2 = CompletableFuture.supplyAsync(()->{
+            PDFResponse pdfResponse = new PDFResponse();
+            ReportRequestEntity entity = reportRequestRepo.findById(id).orElseThrow();
+            try {
+                rs.delete("http://localhost:9999/pdf/{id}",entity.getPdfReport().getFileId());
+                pdfResponse.setReqId(id);
+            } catch(Exception e){
+                log.error("PDF Deletion Error (Sync) : e", e);
+                pdfResponse.setReqId(id);
+                pdfResponse.setFailed(true);
+            } finally {
+                return pdfResponse;
+            }
+        },executor);
+    }
+
 }
