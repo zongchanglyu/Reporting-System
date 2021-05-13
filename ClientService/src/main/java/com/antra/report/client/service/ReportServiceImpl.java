@@ -250,6 +250,17 @@ public class ReportServiceImpl implements ReportService {
         reportRequestRepo.deleteById(reqId);
     }
 
+    @Override
+    public ReportVO updateReportsSync(ReportRequest request) {
+        return null;
+    }
+
+    @Override
+    public ReportVO updateReportsAsync(ReportRequest request) {
+
+        return null;
+    }
+
     public void sendDeleteRequest(String id) {
         ExecutorService executor = Executors.newFixedThreadPool(2);
         RestTemplate rs = new RestTemplate();

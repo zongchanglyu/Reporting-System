@@ -96,6 +96,13 @@ public class ExcelServiceImpl implements ExcelService {
         if (excelFile == null) {
             throw new FileNotFoundException();
         }
+
+        //fix bug: also delete corresponding file from S3 cloud.
+        String location = excelFile.getFileId();
+//        log.debug("delete file from s3 {}", location);
+//        s3Client.deleteObject(s3Bucket, location);
+//        log.debug("Deleted Excel file from S3");
+
         File file = new File(excelFile.getFileLocation());
         file.delete();
         return excelFile;

@@ -5,6 +5,7 @@ import com.antra.report.client.exception.RequestNotFoundException;
 import com.antra.report.client.pojo.FileType;
 import com.antra.report.client.pojo.reponse.ErrorResponse;
 import com.antra.report.client.pojo.reponse.GeneralResponse;
+import com.antra.report.client.pojo.reponse.SqsResponse;
 import com.antra.report.client.pojo.request.ReportRequest;
 import com.antra.report.client.service.ReportService;
 import org.slf4j.Logger;
@@ -88,6 +89,25 @@ public class ReportController {
     }
 
 //   @PutMapping
+    @PutMapping("/report/{id}/sync")
+    public ResponseEntity<GeneralResponse> updateReportDirectly(@PathVariable String id,
+                                                                @RequestBody @Validated ReportRequest request) {
+        request.setReqId(id);
+        log.info("Got Request to update report - sync: {}", request);
+        request.setDescription(String.join(" - ", "Sync", request.getDescription()));
+
+        return ResponseEntity.ok(new GeneralResponse(reportService.updateReportsSync(request)));
+    }
+
+    @PutMapping("/report/{id}/async")
+    public ResponseEntity<GeneralResponse> updateReportAsync(@PathVariable String id,
+                                                             @RequestBody @Validated ReportRequest request) {
+        request.setReqId(id);
+        log.info("Got Request to update report - async: {}", request);
+        request.setDescription(String.join(" - ", "Async", request.getDescription()));
+        reportService.updateReportsAsync(request);
+        return ResponseEntity.ok(new GeneralResponse());
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<GeneralResponse> handleValidationException(MethodArgumentNotValidException e) {

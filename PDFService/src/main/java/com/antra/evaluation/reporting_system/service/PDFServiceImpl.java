@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.File;
 import java.time.LocalDateTime;
@@ -60,5 +61,20 @@ public class PDFServiceImpl implements PDFService {
 
         return file;
     }
+
+    @Override
+    @Transactional
+    public void deleteFile(String id) {
+        String fileLocation = repository.findById(id).orElseThrow().getFileLocation();
+
+        //also delete corresponding file from S3 cloud.
+        String location = fileLocation.split("/")[1];
+//        log.debug("delete file from s3 {}", location);
+//        s3Client.deleteObject(s3Bucket, location);
+//        log.debug("Deleted Excel file from S3");
+
+        repository.deleteById(id);
+    }
+
 
 }

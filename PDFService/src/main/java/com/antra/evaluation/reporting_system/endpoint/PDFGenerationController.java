@@ -6,13 +6,12 @@ import com.antra.evaluation.reporting_system.pojo.report.PDFFile;
 import com.antra.evaluation.reporting_system.service.PDFService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 public class PDFGenerationController {
@@ -46,6 +45,16 @@ public class PDFGenerationController {
             log.error("Error in generating pdf", e);
         }
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @DeleteMapping("/pdf/{id}")
+    public ResponseEntity<String> deletePDF(@PathVariable String id) {
+        log.debug("Got Request to Delete File:{}", id);
+        var response = new PDFResponse();
+        pdfService.deleteFile(id);
+
+        log.debug("File Deleted:{}", id);
+        return new ResponseEntity<>("Deleting PDF file Success!", HttpStatus.OK);
     }
 
 }
