@@ -1,5 +1,6 @@
 package com.antra.evaluation.reporting_system.endpoint;
 
+import com.antra.evaluation.reporting_system.entity.ExcelFileEntity;
 import com.antra.evaluation.reporting_system.exception.FileGenerationException;
 import com.antra.evaluation.reporting_system.pojo.api.ErrorResponse;
 import com.antra.evaluation.reporting_system.pojo.api.ExcelRequest;
@@ -45,7 +46,7 @@ public class ExcelGenerationController {
     @ApiOperation("Generate Excel")
     public ResponseEntity<ExcelResponse> createExcel(@RequestBody @Validated ExcelRequest request) {
         log.debug("Got Request to Create Single Sheet Excel:{}", request);
-        ExcelFile fileInfo = excelService.generateFile(request, false, null);
+        ExcelFileEntity fileInfo = excelService.generateFile(request, false, null);
         ExcelResponse response = new ExcelResponse();
         BeanUtils.copyProperties(fileInfo, response);
         response.setFileDownloadLink(this.generateFileDownloadLink(fileInfo.getFileId()));
@@ -69,7 +70,7 @@ public class ExcelGenerationController {
         if(!request.getHeaders().contains(request.getSplitBy())){
             throw new InvalidParameterException("No such header for splitting the sheets");
         }
-        ExcelFile fileInfo = excelService.generateFile(request, true, null);
+        ExcelFileEntity fileInfo = excelService.generateFile(request, true, null);
         ExcelResponse response = new ExcelResponse();
         BeanUtils.copyProperties(fileInfo, response);
         response.setFileLocation(this.generateFileDownloadLink(fileInfo.getFileId()));
@@ -80,7 +81,7 @@ public class ExcelGenerationController {
     @ApiOperation("List all existing files")
     public ResponseEntity<List<ExcelResponse>> listExcels() {
         log.debug("Got Request to List All Files");
-        List<ExcelFile> fileList = excelService.getExcelList();
+        List<ExcelFileEntity> fileList = excelService.getExcelList();
         var responseList = fileList.stream().map(file -> {
             ExcelResponse response = new ExcelResponse();
             BeanUtils.copyProperties(file, response);
@@ -104,7 +105,7 @@ public class ExcelGenerationController {
     public ResponseEntity<ExcelResponse> deleteExcel(@PathVariable String id) throws FileNotFoundException {
         log.debug("Got Request to Delete File:{}", id);
         var response = new ExcelResponse();
-        ExcelFile fileDeleted = excelService.deleteFile(id);
+        ExcelFileEntity fileDeleted = excelService.deleteFile(id);
         BeanUtils.copyProperties(fileDeleted, response);
         response.setFileLocation(this.generateFileDownloadLink(fileDeleted.getFileId()));
         log.debug("File Deleted:{}", fileDeleted);
@@ -121,7 +122,7 @@ public class ExcelGenerationController {
         response.setReqId(request.getReqId());
 
         try {
-            ExcelFile file = excelService.updateExcel(request, id);
+            ExcelFileEntity file = excelService.updateExcel(request, id);
             response.setReqId(file.getFileId());
             response.setFileLocation(file.getFileLocation());
             response.setFileSize(file.getFileSize());

@@ -1,5 +1,6 @@
 package com.antra.evaluation.reporting_system.endpoint;
 
+import com.antra.evaluation.reporting_system.entity.ExcelFileEntity;
 import com.antra.evaluation.reporting_system.pojo.api.ExcelRequest;
 import com.antra.evaluation.reporting_system.pojo.api.ExcelResponse;
 import com.antra.evaluation.reporting_system.pojo.api.ExcelSNSRequest;
@@ -28,7 +29,7 @@ public class ExcelRequestQueueListener {
    // @SqsListener("PDF_Request_Queue")
     public void queueListener(ExcelRequest request) {
 //        log.info("Get request: {}", request);
-        ExcelFile file = null;
+        ExcelFileEntity file = null;
         ExcelResponse response = new ExcelResponse();
         response.setReqId(request.getReqId());
 
