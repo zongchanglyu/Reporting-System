@@ -24,7 +24,7 @@ public interface ReportService {
 
     ReportRequestEntity findFileById(String reqId);
 
-    void delteFileById(String reqId);
+    void deleteFileById(String reqId);
 
     ReportVO updateReportsSync(ReportRequest request);
 

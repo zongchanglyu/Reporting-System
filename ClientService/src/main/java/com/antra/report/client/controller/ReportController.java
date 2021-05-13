@@ -84,7 +84,7 @@ public class ReportController {
             throw new RequestNotFoundException();
         }
         log.info("Got Request to delete report -  reqid: {}", reqId);
-        reportService.delteFileById(reqId);
+        reportService.deleteFileById(reqId);
         return ResponseEntity.ok(new GeneralResponse());
     }
 

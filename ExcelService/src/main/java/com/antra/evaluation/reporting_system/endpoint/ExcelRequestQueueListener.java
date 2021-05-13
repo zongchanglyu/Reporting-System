@@ -33,7 +33,7 @@ public class ExcelRequestQueueListener {
         response.setReqId(request.getReqId());
 
         try {
-            file = excelService.generateFile(request, false);
+            file = excelService.generateFile(request,false, null);
             response.setFileId(file.getFileId());
             response.setFileLocation(file.getFileLocation());
             response.setFileSize(file.getFileSize());

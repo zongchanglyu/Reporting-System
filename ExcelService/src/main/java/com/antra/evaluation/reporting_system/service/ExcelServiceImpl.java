@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.*;
 import java.time.LocalDateTime;
@@ -48,9 +49,9 @@ public class ExcelServiceImpl implements ExcelService {
     }
 
     @Override
-    public ExcelFile generateFile(ExcelRequest request, boolean multisheet) {
+    public ExcelFile generateFile(ExcelRequest request, boolean multisheet, String id) {
         ExcelFile fileInfo = new ExcelFile();
-        fileInfo.setFileId(UUID.randomUUID().toString());
+        fileInfo.setFileId(id == null ? UUID.randomUUID().toString() : id);
         ExcelData data = new ExcelData();
         data.setTitle(request.getDescription());
         data.setFileId(fileInfo.getFileId());
@@ -106,6 +107,19 @@ public class ExcelServiceImpl implements ExcelService {
         File file = new File(excelFile.getFileLocation());
         file.delete();
         return excelFile;
+    }
+
+    //update
+    @Transactional
+    @Override
+    public ExcelFile updateExcel(ExcelRequest request, String id) {
+        try {
+            deleteFile(id);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        ExcelFile file = generateFile(request, false, id);
+        return file;
     }
 
     private List<ExcelDataSheet> generateSheet(ExcelRequest request) {

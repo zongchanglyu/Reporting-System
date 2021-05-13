@@ -33,7 +33,7 @@ public class PDFRequestQueueListener {
         response.setReqId(request.getReqId());
 
         try {
-            file = pdfService.createPDF(request);
+            file = pdfService.createPDF(request, null);
             response.setFileId(file.getId());
             response.setFileLocation(file.getFileLocation());
             response.setFileSize(file.getFileSize());

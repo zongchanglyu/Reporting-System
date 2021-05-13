@@ -18,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.core.io.Resource;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -89,8 +90,6 @@ public class ReportServiceImpl implements ReportService {
     //TODO:Change to parallel process using Threadpool? CompletableFuture?
     private void sendDirectRequests(ReportRequest request) throws ExecutionException, InterruptedException {
         RestTemplate rs = new RestTemplate();
-//        ExcelResponse excelResponse = new ExcelResponse();
-//        PDFResponse pdfResponse = new PDFResponse();
         ExecutorService executor = Executors.newCachedThreadPool();
 
         CompletableFuture<ExcelResponse> cf1 = CompletableFuture.supplyAsync(()->{
@@ -121,25 +120,6 @@ public class ReportServiceImpl implements ReportService {
 
         updateLocal(cf1.get());
         updateLocal(cf2.get());
-
-//        try {
-//            excelResponse = rs.postForEntity("http://localhost:8888/excel", request, ExcelResponse.class).getBody();
-//        } catch(Exception e){
-//            log.error("Excel Generation Error (Sync) : e", e);
-//            excelResponse.setReqId(request.getReqId());
-//            excelResponse.setFailed(true);
-//        } finally {
-//            updateLocal(excelResponse);
-//        }
-//        try {
-//            pdfResponse = rs.postForEntity("http://localhost:9999/pdf", request, PDFResponse.class).getBody();
-//        } catch(Exception e){
-//            log.error("PDF Generation Error (Sync) : e", e);
-//            pdfResponse.setReqId(request.getReqId());
-//            pdfResponse.setFailed(true);
-//        } finally {
-//            updateLocal(pdfResponse);
-//        }
     }
 
     private void updateLocal(ExcelResponse excelResponse) {
@@ -243,22 +223,13 @@ public class ReportServiceImpl implements ReportService {
         return entity;
     }
 
+
+    //delete
     @Transactional
     @Override
-    public void delteFileById(String reqId) {
+    public void deleteFileById(String reqId) {
         sendDeleteRequest(reqId);
         reportRequestRepo.deleteById(reqId);
-    }
-
-    @Override
-    public ReportVO updateReportsSync(ReportRequest request) {
-        return null;
-    }
-
-    @Override
-    public ReportVO updateReportsAsync(ReportRequest request) {
-
-        return null;
     }
 
     public void sendDeleteRequest(String id) {
@@ -296,4 +267,64 @@ public class ReportServiceImpl implements ReportService {
         },executor);
     }
 
+
+    //update
+    @Override
+    public ReportVO updateReportsSync(ReportRequest request) {
+        try {
+            sendDirectUpdateRequests(request);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return new ReportVO(reportRequestRepo.findById(request.getReqId()).orElseThrow());
+    }
+
+    private void sendDirectUpdateRequests(ReportRequest request) throws InterruptedException, ExecutionException{
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        RestTemplate rs = new RestTemplate();
+        CompletableFuture<ExcelResponse> cf1 = CompletableFuture.supplyAsync(()->{
+            ExcelResponse excelResponse = new ExcelResponse();
+            ReportRequestEntity entity = reportRequestRepo.findById(request.getReqId()).orElseThrow();
+            try {
+                HttpEntity<ReportRequest> httpEntity = new HttpEntity<>(request);
+                excelResponse = rs.exchange("http://localhost:8888/excel/{id}",HttpMethod.PUT,
+                        httpEntity,ExcelResponse.class,entity.getExcelReport().getFileId()).getBody();
+            } catch(Exception e){
+                log.error("Excel Update Error (Sync) : e", e);
+                excelResponse.setReqId(request.getReqId());
+                excelResponse.setFailed(true);
+            } finally {
+                return excelResponse;
+            }
+        },executor);
+
+        CompletableFuture<PDFResponse> cf2 = CompletableFuture.supplyAsync(()->{
+            PDFResponse pdfResponse = new PDFResponse();
+            ReportRequestEntity entity = reportRequestRepo.findById(request.getReqId()).orElseThrow();
+            try {
+                HttpEntity<ReportRequest> httpEntity = new HttpEntity<>(request);
+                pdfResponse = rs.exchange("http://localhost:9999/pdf/{id}",HttpMethod.PUT,
+                        httpEntity,PDFResponse.class,entity.getPdfReport().getFileId()).getBody();
+            } catch(Exception e){
+                log.error("PDF Update Error (Sync) : e", e);
+                pdfResponse.setReqId(request.getReqId());
+                pdfResponse.setFailed(true);
+            } finally {
+                return pdfResponse;
+            }
+        },executor);
+
+        updateLocal(cf1.get());
+        updateLocal(cf2.get());
+    }
+
+    @Override
+    @Transactional
+    public ReportVO updateReportsAsync(ReportRequest request) {
+        ReportRequest req = new ReportRequest();
+        BeanUtils.copyProperties(request, req);
+        snsService.sendReportNotification(req);
+        log.info("Send SNS the message: {}",req);
+        return new ReportVO(reportRequestRepo.findById(request.getReqId()).orElseThrow());
+    }
 }

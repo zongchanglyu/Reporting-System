@@ -35,9 +35,9 @@ public class PDFServiceImpl implements PDFService {
     }
 
     @Override
-    public PDFFile createPDF(final PDFRequest request) {
+    public PDFFile createPDF(final PDFRequest request, String id) {
         PDFFile file = new PDFFile();
-        file.setId("File-" + UUID.randomUUID().toString());
+        file.setId(id == null ? "File-" + UUID.randomUUID().toString() : id);
         file.setSubmitter(request.getSubmitter());
         file.setDescription(request.getDescription());
         file.setGeneratedTime(LocalDateTime.now());
@@ -74,6 +74,14 @@ public class PDFServiceImpl implements PDFService {
 //        log.debug("Deleted Excel file from S3");
 
         repository.deleteById(id);
+    }
+
+    @Transactional
+    @Override
+    public PDFFile updatePDF(final PDFRequest request, String id) {
+        deleteFile(id);
+        PDFFile file = createPDF(request, id);
+        return file;
     }
 
 

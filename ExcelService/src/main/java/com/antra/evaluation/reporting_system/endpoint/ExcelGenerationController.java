@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.FileCopyUtils;
@@ -44,7 +45,7 @@ public class ExcelGenerationController {
     @ApiOperation("Generate Excel")
     public ResponseEntity<ExcelResponse> createExcel(@RequestBody @Validated ExcelRequest request) {
         log.debug("Got Request to Create Single Sheet Excel:{}", request);
-        ExcelFile fileInfo = excelService.generateFile(request, false);
+        ExcelFile fileInfo = excelService.generateFile(request, false, null);
         ExcelResponse response = new ExcelResponse();
         BeanUtils.copyProperties(fileInfo, response);
         response.setFileDownloadLink(this.generateFileDownloadLink(fileInfo.getFileId()));
@@ -68,7 +69,7 @@ public class ExcelGenerationController {
         if(!request.getHeaders().contains(request.getSplitBy())){
             throw new InvalidParameterException("No such header for splitting the sheets");
         }
-        ExcelFile fileInfo = excelService.generateFile(request, true);
+        ExcelFile fileInfo = excelService.generateFile(request, true, null);
         ExcelResponse response = new ExcelResponse();
         BeanUtils.copyProperties(fileInfo, response);
         response.setFileLocation(this.generateFileDownloadLink(fileInfo.getFileId()));
@@ -107,6 +108,28 @@ public class ExcelGenerationController {
         BeanUtils.copyProperties(fileDeleted, response);
         response.setFileLocation(this.generateFileDownloadLink(fileDeleted.getFileId()));
         log.debug("File Deleted:{}", fileDeleted);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PutMapping("/excel/{id}")
+    public ResponseEntity<ExcelResponse> updatePDF(@PathVariable String id,
+                                                 HttpEntity<ExcelRequest> httpEntity) {
+        ExcelRequest request = httpEntity.getBody();
+        log.info("Got request to update PDF: {}", request);
+
+        ExcelResponse response = new ExcelResponse();
+        response.setReqId(request.getReqId());
+
+        try {
+            ExcelFile file = excelService.updateExcel(request, id);
+            response.setReqId(file.getFileId());
+            response.setFileLocation(file.getFileLocation());
+            response.setFileSize(file.getFileSize());
+            log.info("Updated: {}", file);
+        } catch (Exception e) {
+            response.setFailed(true);
+            log.error("Error in updating pdf", e);
+        }
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

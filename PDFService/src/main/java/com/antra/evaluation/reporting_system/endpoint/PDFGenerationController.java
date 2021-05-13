@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -35,7 +36,7 @@ public class PDFGenerationController {
         response.setReqId(request.getReqId());
 
         try {
-            file = pdfService.createPDF(request);
+            file = pdfService.createPDF(request, null);
             response.setFileId(file.getId());
             response.setFileLocation(file.getFileLocation());
             response.setFileSize(file.getFileSize());
@@ -55,6 +56,28 @@ public class PDFGenerationController {
 
         log.debug("File Deleted:{}", id);
         return new ResponseEntity<>("Deleting PDF file Success!", HttpStatus.OK);
+    }
+
+    @PutMapping("/pdf/{id}")
+    public ResponseEntity<PDFResponse> updatePDF(@PathVariable String id,
+                                                 HttpEntity<PDFRequest> httpEntity) {
+        PDFRequest request = httpEntity.getBody();
+        log.info("Got request to update PDF: {}", request);
+
+        PDFResponse response = new PDFResponse();
+        response.setReqId(request.getReqId());
+
+        try {
+            PDFFile file = pdfService.updatePDF(request, id);
+            response.setFileId(file.getId());
+            response.setFileLocation(file.getFileLocation());
+            response.setFileSize(file.getFileSize());
+            log.info("Updated: {}", file);
+        } catch (Exception e) {
+            response.setFailed(true);
+            log.error("Error in updating pdf", e);
+        }
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
 }
