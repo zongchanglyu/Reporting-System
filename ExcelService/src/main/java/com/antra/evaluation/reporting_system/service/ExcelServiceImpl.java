@@ -94,10 +94,8 @@ public class ExcelServiceImpl implements ExcelService {
 
     @Override
     public ExcelFileEntity deleteFile(String id) throws FileNotFoundException {
-        ExcelFileEntity excelFile = excelRepository.findById(id).orElse(null);
-        if (excelFile == null) {
-            throw new FileNotFoundException();
-        }
+        ExcelFileEntity excelFile = excelRepository.findById(id).orElse(new ExcelFileEntity());
+
         //fix bug: also delete corresponding file from S3 cloud.
 //        String location = id;
 //        log.debug("delete file from s3 {}", location);

@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
 @Entity(name="excel_file")
 public class ExcelFileEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+//    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private String fileId;
     private String fileName;
     private String fileLocation;
